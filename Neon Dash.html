@@ -9,6 +9,7 @@
             --neon-blue: #00f2ff;
             --neon-pink: #ff007f;
             --neon-gold: #ffcf00;
+            --neon-purple: #bc13fe;
             --bg-dark: #0a0a0c;
         }
 
@@ -41,11 +42,18 @@
 
         #ui-layer {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 40px; 
+            left: 40px;
+            right: 40px;
             pointer-events: none;
             transition: opacity 0.5s ease;
             z-index: 5;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .stats-col {
             display: flex;
             flex-direction: column;
             gap: 5px;
@@ -70,6 +78,25 @@
             height: 20px;
             fill: var(--neon-pink);
             filter: drop-shadow(0 0 5px var(--neon-pink));
+        }
+
+        #exit-btn-ui {
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--neon-pink);
+            color: var(--neon-pink);
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        #exit-btn-ui:hover {
+            background: var(--neon-pink);
+            color: white;
         }
 
         #countdown {
@@ -161,6 +188,9 @@
             opacity: 0;
             transform: translateY(20px);
             transition: opacity 0.5s ease, transform 0.5s ease;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 10px;
         }
 
         .active-menu {
@@ -261,15 +291,34 @@
             margin-bottom: 10px;
             text-transform: uppercase;
         }
+
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+        .tab-content.active {
+            display: flex;
+        }
+        .tab-btn-group {
+            border-bottom: 1px solid #333;
+            width: 100%;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        <div id="ui-layer">
-            <div class="stat">SCORE: <span id="score-val">0</span></div>
-            <div id="health-display"></div>
-            <div class="stat" style="font-size: 14px; opacity: 0.7; margin-top: 10px;">HIGH: <span id="high-val">0</span></div>
+        <div id="ui-layer" style="opacity: 0;">
+            <div class="stats-col">
+                <div id="score-container" class="stat">SCORE: <span id="score-val">0</span></div>
+                <div id="health-display"></div>
+                <div id="high-score-container" class="stat" style="font-size: 14px; opacity: 0.7; margin-top: 10px;">HIGH: <span id="high-val">0</span></div>
+            </div>
+            <button id="exit-btn-ui" title="Press P to Quit">Exit (P)</button>
         </div>
 
         <div id="countdown"></div>
@@ -279,7 +328,6 @@
                 <h1 id="title" data-text=""></h1><span id="title-cursor" class="cursor"></span>
             </div>
             
-            <!-- Main Menu -->
             <div id="menu-content" class="menu-pane">
                 <div class="btn-row">
                     <button class="secondary-btn diff-btn" data-level="0.6" data-speed="0.05" data-hardcore="false">CASUAL</button>
@@ -296,43 +344,72 @@
                 </div>
             </div>
 
-            <!-- Settings Menu -->
             <div id="settings-menu" class="menu-pane">
-                <p class="setting-label">Configurations</p>
+                <p class="setting-label">Visual Effects</p>
                 <div class="btn-row">
-                    <button id="toggle-anim-btn" class="secondary-btn active">Animations: ON</button>
+                    <button id="toggle-anim-btn" class="secondary-btn active">Bloom: ON</button>
+                    <button id="toggle-blink-btn" class="secondary-btn active">Invincible Blink: ON</button>
                 </div>
+                
+                <p class="setting-label">Background Selection</p>
+                <div class="btn-row">
+                    <button id="toggle-grid-btn" class="secondary-btn active">Grid: ON</button>
+                    <button id="toggle-box-btn" class="secondary-btn active">Containment Box: ON</button>
+                </div>
+
                 <p class="setting-label">Core Integrity (Hearts)</p>
                 <div class="btn-row">
                     <button class="secondary-btn heart-setting-btn" data-hearts="1">1</button>
                     <button class="secondary-btn heart-setting-btn active" data-hearts="2">2</button>
                     <button class="secondary-btn heart-setting-btn" data-hearts="3">3</button>
                 </div>
-                <button class="primary-btn back-to-main">Back</button>
+                <button class="primary-btn back-to-main" style="margin-top: 20px;">Back</button>
             </div>
 
-            <!-- Custom Menu -->
             <div id="custom-menu" class="menu-pane">
-                <p class="setting-label">Manual Overrides</p>
-                <div class="slider-group">
-                    <label>Player Response (Speed)</label>
-                    <input type="range" id="custom-player-speed" min="0.02" max="0.3" step="0.01" value="0.1">
+                <div class="btn-row tab-btn-group">
+                    <button id="tab-gameplay-btn" class="secondary-btn active">Gameplay</button>
+                    <button id="tab-player-btn" class="secondary-btn">Player</button>
                 </div>
-                <div class="slider-group">
-                    <label>Hazard Velocity</label>
-                    <input type="range" id="custom-hazard-speed" min="0.5" max="3.0" step="0.1" value="1.0">
+
+                <div id="tab-gameplay" class="tab-content active">
+                    <p class="setting-label">Hazard Configurations</p>
+                    <div class="slider-group">
+                        <label>Hazard Velocity</label>
+                        <input type="range" id="custom-hazard-speed" min="0.5" max="3.0" step="0.1" value="1.0">
+                    </div>
+                    <div class="slider-group">
+                        <label>Hazard Density</label>
+                        <input type="range" id="custom-density" min="1" max="30" step="1" value="5">
+                    </div>
+                    <div class="slider-group">
+                        <label>Shard Count (Bonuses)</label>
+                        <input type="range" id="custom-shards" min="0" max="20" step="1" value="3">
+                    </div>
                 </div>
-                <div class="slider-group">
-                    <label>Spawn Density</label>
-                    <input type="range" id="custom-density" min="1" max="15" step="1" value="5">
+
+                <div id="tab-player" class="tab-content">
+                    <p class="setting-label">Pilot Calibration</p>
+                    <div class="slider-group">
+                        <label>Response Sensitivity (Speed)</label>
+                        <input type="range" id="custom-player-speed" min="0.02" max="0.3" step="0.01" value="0.08">
+                    </div>
+                    <p class="setting-label" style="margin-top:10px;">Core Integrity (Hearts)</p>
+                    <div class="btn-row">
+                        <button class="secondary-btn heart-setting-btn" data-hearts="1">1</button>
+                        <button class="secondary-btn heart-setting-btn active" data-hearts="2">2</button>
+                        <button class="secondary-btn heart-setting-btn" data-hearts="3">3</button>
+                    </div>
+                    <div class="btn-row">
+                        <button id="toggle-invincible-btn" class="secondary-btn">God Mode: OFF</button>
+                    </div>
                 </div>
-                <div class="slider-group">
-                    <label>Core Stability (Hearts)</label>
-                    <input type="range" id="custom-hearts" min="1" max="3" step="1" value="2">
+
+                <div style="margin-top: 20px; width: 100%; display: flex; flex-direction: column; align-items: center;">
+                    <button id="custom-start-btn" class="primary-btn">Deploy</button>
+                    <br>
+                    <button class="secondary-btn back-to-main">Cancel</button>
                 </div>
-                <button id="custom-start-btn" class="primary-btn">Deploy</button>
-                <br>
-                <button class="secondary-btn back-to-main">Cancel</button>
             </div>
 
             <div id="reboot-hint">REBOOT UNIT DETECTED</div>
@@ -347,6 +424,8 @@
         const ctx = canvas.getContext('2d');
         const scoreEl = document.getElementById('score-val');
         const highEl = document.getElementById('high-val');
+        const scoreContainer = document.getElementById('score-container');
+        const highContainer = document.getElementById('high-score-container');
         const healthEl = document.getElementById('health-display');
         const overlay = document.getElementById('overlay');
         const uiLayer = document.getElementById('ui-layer');
@@ -356,13 +435,12 @@
         const titleCursor = document.getElementById('title-cursor');
         const rebootHint = document.getElementById('reboot-hint');
         const startBtn = document.getElementById('start-btn');
+        const exitBtnUi = document.getElementById('exit-btn-ui');
 
-        // Menus
         const mainMenu = document.getElementById('menu-content');
         const settingsMenu = document.getElementById('settings-menu');
         const customMenu = document.getElementById('custom-menu');
 
-        // State
         let gameActive = false;
         let isWarmUp = false;
         let isTransitioning = false;
@@ -370,6 +448,9 @@
         let waitingForReboot = false;
         let sandboxMode = false;
         let animEnabled = true;
+        let gridEnabled = true;
+        let boxEnabled = true;
+        let blinkEnabled = true;
         let hasFailedOnce = false;
 
         let score = 0;
@@ -377,17 +458,22 @@
         let hearts = 2;
         let currentHearts = 2;
         let invulnerable = false;
+        let permanentInvincibility = false;
+        
         let enemies = [];
         let collectibles = [];
+        let shards = [];
         
         let diffBase = 1.0;
         let isHardcore = false;
         let hazardSpeedMult = 1.0;
         let playerLerp = 0.08;
         let initialEnemyCount = 5;
+        let initialShardCount = 0;
+
+        const ARENA_MARGIN = 20;
 
         const random = (min, max) => Math.random() * (max - min) + min;
-
         const heartSvg = `<svg class="heart-icon" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
 
         // --- 2. Logic Classes ---
@@ -399,28 +485,40 @@
             }
             reset() {
                 const side = Math.floor(Math.random() * 4);
-                const buffer = 100;
+                const buffer = 150; 
+                
                 if (side === 0) { this.x = random(0, canvas.width); this.y = -buffer; }
                 else if (side === 1) { this.x = canvas.width + buffer; this.y = random(0, canvas.height); }
                 else if (side === 2) { this.x = random(0, canvas.width); this.y = canvas.height + buffer; }
                 else { this.x = -buffer; this.y = random(0, canvas.height); }
 
-                const tx = random(canvas.width * 0.1, canvas.width * 0.9);
-                const ty = random(canvas.height * 0.1, canvas.height * 0.9);
+                const tx = random(ARENA_MARGIN + 50, canvas.width - ARENA_MARGIN - 50);
+                const ty = random(ARENA_MARGIN + 50, canvas.height - ARENA_MARGIN - 50);
                 const angle = Math.atan2(ty - this.y, tx - this.x);
-                const speed = (this.type === 'enemy' ? random(2, 4) * diffBase * hazardSpeedMult : random(1, 3));
+                
+                let speed;
+                if(this.type === 'enemy') speed = random(2, 4) * diffBase * hazardSpeedMult;
+                else if(this.type === 'shard') speed = random(1.5, 3.5);
+                else speed = random(1, 3);
                 
                 this.vx = Math.cos(angle) * speed;
                 this.vy = Math.sin(angle) * speed;
-                this.size = this.type === 'enemy' ? random(15, 30) : 12;
+                
+                if(this.type === 'enemy') this.size = random(18, 30);
+                else if(this.type === 'shard') this.size = 10;
+                else this.size = 12;
+
                 this.rotation = Math.random() * Math.PI * 2;
-                this.rotSpeed = random(-0.05, 0.05);
+                this.rotSpeed = random(-0.04, 0.04);
             }
             update() {
                 if (!isFadingOut) {
                     this.x += this.vx; this.y += this.vy; 
                     this.rotation += this.rotSpeed;
-                    if (this.x < -200 || this.x > canvas.width + 200 || this.y < -200 || this.y > canvas.height + 200) this.reset();
+                    
+                    if (this.x < -300 || this.x > canvas.width + 300 || this.y < -300 || this.y > canvas.height + 300) {
+                        this.reset();
+                    }
                 } else { this.opacity -= 0.02; }
             }
             draw() {
@@ -429,10 +527,21 @@
                 ctx.globalAlpha = this.opacity;
                 ctx.translate(this.x, this.y);
                 ctx.rotate(this.rotation);
+                
                 if (this.type === 'enemy') {
                     if (animEnabled) { ctx.shadowBlur = 15; ctx.shadowColor = '#ff007f'; }
                     ctx.strokeStyle = '#ff007f'; ctx.lineWidth = 3;
+                    // Full Square/Cube Aesthetic for enemies
                     ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
+                } else if (this.type === 'shard') {
+                    if (animEnabled) { ctx.shadowBlur = 12; ctx.shadowColor = '#bc13fe'; }
+                    ctx.fillStyle = '#bc13fe';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -this.size);
+                    ctx.lineTo(this.size, this.size/2);
+                    ctx.lineTo(-this.size, this.size/2);
+                    ctx.closePath();
+                    ctx.fill();
                 } else {
                     if (animEnabled) { ctx.shadowBlur = 10; ctx.shadowColor = '#ffcf00'; }
                     ctx.fillStyle = '#ffcf00';
@@ -454,7 +563,11 @@
         }
 
         function updateHealthUI() {
-            healthEl.innerHTML = heartSvg.repeat(currentHearts);
+            if (permanentInvincibility) {
+                healthEl.innerHTML = `<span style="color:var(--neon-blue); font-size:12px; font-weight:bold; letter-spacing:1px;">GOD MODE ACTIVE</span>`;
+            } else {
+                healthEl.innerHTML = heartSvg.repeat(currentHearts);
+            }
         }
 
         async function showMenu(menuElement) {
@@ -498,20 +611,23 @@
             if (isTransitioning) return;
             isTransitioning = true;
             overlay.classList.remove('visible');
-            uiLayer.style.opacity = isSandbox ? "0" : "1";
+            uiLayer.style.opacity = "1";
             
             score = 0; scoreEl.innerText = score;
             currentHearts = isHardcore ? 1 : hearts;
             updateHealthUI();
+            
+            sandboxMode = isSandbox;
+            scoreContainer.style.display = isSandbox ? "none" : "block";
+            highContainer.style.display = isSandbox ? "none" : "block";
+            healthEl.style.display = isSandbox ? "none" : "flex";
 
-            enemies = []; collectibles = []; player.trail = [];
-            isFadingOut = false; sandboxMode = isSandbox;
+            enemies = []; collectibles = []; shards = []; player.trail = [];
+            isFadingOut = false;
             invulnerable = false;
             
-            if (!waitingForReboot) {
-                player.x = canvas.width / 2; player.y = canvas.height / 2;
-                player.targetX = player.x; player.targetY = player.y;
-            }
+            player.x = canvas.width / 2; player.y = canvas.height / 2;
+            player.targetX = player.x; player.targetY = player.y;
 
             await new Promise(r => setTimeout(r, 500));
             isTransitioning = false;
@@ -522,6 +638,7 @@
                 await runCountdown();
                 for (let i = 0; i < initialEnemyCount; i++) enemies.push(new GameObject('enemy'));
                 for (let i = 0; i < 3; i++) collectibles.push(new GameObject('gold'));
+                for (let i = 0; i < initialShardCount; i++) shards.push(new GameObject('shard'));
             }
         }
 
@@ -537,7 +654,7 @@
         }
 
         function takeDamage() {
-            if (invulnerable || !gameActive) return;
+            if (invulnerable || permanentInvincibility || !gameActive) return;
             currentHearts--;
             updateHealthUI();
             
@@ -547,6 +664,18 @@
                 invulnerable = true;
                 setTimeout(() => invulnerable = false, 1500);
             }
+        }
+
+        async function quitToMenu() {
+            if (!gameActive && !isFadingOut) return;
+            gameActive = false;
+            isWarmUp = false;
+            isFadingOut = true;
+            uiLayer.style.opacity = "0";
+            
+            await new Promise(r => setTimeout(r, 800));
+            overlay.classList.add('visible');
+            runIntro("NEON DASH", "menu");
         }
 
         async function gameOver() {
@@ -569,14 +698,24 @@
         };
 
         function handleKeyboard() {
-            const speed = 8;
+            const speed = 10;
             if (keys['ArrowUp'] || keys['w']) player.targetY -= speed;
             if (keys['ArrowDown'] || keys['s']) player.targetY += speed;
             if (keys['ArrowLeft'] || keys['a']) player.targetX -= speed;
             if (keys['ArrowRight'] || keys['d']) player.targetX += speed;
+        }
 
-            player.targetX = Math.max(0, Math.min(canvas.width, player.targetX));
-            player.targetY = Math.max(0, Math.min(canvas.height, player.targetY));
+        function constrainPlayer() {
+            const pBuf = 15; 
+            if (boxEnabled) {
+                // Constrain to the box
+                player.targetX = Math.max(ARENA_MARGIN + pBuf, Math.min(canvas.width - ARENA_MARGIN - pBuf, player.targetX));
+                player.targetY = Math.max(ARENA_MARGIN + pBuf, Math.min(canvas.height - ARENA_MARGIN - pBuf, player.targetY));
+            } else {
+                // Constrain to full screen edges
+                player.targetX = Math.max(pBuf, Math.min(canvas.width - pBuf, player.targetX));
+                player.targetY = Math.max(pBuf, Math.min(canvas.height - pBuf, player.targetY));
+            }
         }
 
         function animate() {
@@ -585,12 +724,35 @@
             ctx.fillStyle = 'rgba(10, 10, 12, 0.4)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Grid
-            ctx.strokeStyle = `rgba(0, 242, 255, 0.05)`;
-            for(let i=0; i<canvas.width; i+=60) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
-            for(let i=0; i<canvas.height; i+=60) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+            // GRID
+            if (gridEnabled) {
+                ctx.strokeStyle = `rgba(0, 242, 255, 0.05)`;
+                ctx.lineWidth = 1;
+                for(let i=0; i<canvas.width; i+=60) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
+                for(let i=0; i<canvas.height; i+=60) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+            }
 
-            if (gameActive) handleKeyboard();
+            // NEON CONTAINMENT WALL
+            if (boxEnabled) {
+                ctx.save();
+                if (animEnabled) {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = 'rgba(0, 242, 255, 1)';
+                    ctx.strokeStyle = 'rgba(0, 242, 255, 0.9)';
+                    ctx.lineWidth = 5;
+                    ctx.strokeRect(ARENA_MARGIN, ARENA_MARGIN, canvas.width - ARENA_MARGIN*2, canvas.height - ARENA_MARGIN*2);
+                } else {
+                    ctx.strokeStyle = `rgba(0, 242, 255, 0.8)`;
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(ARENA_MARGIN, ARENA_MARGIN, canvas.width - ARENA_MARGIN*2, canvas.height - ARENA_MARGIN*2);
+                }
+                ctx.restore();
+            }
+
+            if (gameActive) {
+                handleKeyboard();
+                constrainPlayer();
+            }
 
             player.x += (player.targetX - player.x) * playerLerp;
             player.y += (player.targetY - player.y) * playerLerp;
@@ -598,20 +760,25 @@
             player.trail.push({x: player.x, y: player.y});
             if (player.trail.length > 10) player.trail.shift();
             
+            const isInvincible = invulnerable || permanentInvincibility;
+            const flash = blinkEnabled && isInvincible && Math.floor(Date.now()/100)%2;
+            
+            ctx.save();
             ctx.beginPath(); 
-            ctx.strokeStyle = invulnerable && Math.floor(Date.now()/100)%2 ? 'transparent' : player.color; 
+            ctx.strokeStyle = flash ? 'transparent' : player.color; 
             ctx.lineWidth = 3;
             player.trail.forEach((p, i) => {
                 ctx.globalAlpha = i / player.trail.length;
                 if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
             });
-            ctx.stroke(); ctx.globalAlpha = 1;
+            ctx.stroke(); 
+            ctx.restore();
 
-            if (animEnabled && (!invulnerable || Math.floor(Date.now()/100)%2)) { 
+            if (animEnabled && (!flash)) { 
                 ctx.shadowBlur = 15; ctx.shadowColor = player.color; 
             }
             
-            if (!invulnerable || Math.floor(Date.now()/100)%2) {
+            if (!flash) {
                 ctx.fillStyle = player.color;
                 ctx.fillRect(player.x - 10, player.y - 10, 20, 20);
             }
@@ -620,7 +787,7 @@
             if (!isWarmUp && !sandboxMode) {
                 enemies.forEach(e => {
                     e.update(); e.draw();
-                    if (gameActive && Math.hypot(player.x - e.x, player.y - e.y) < 20) takeDamage();
+                    if (gameActive && Math.hypot(player.x - e.x, player.y - e.y) < (e.size/2 + 10)) takeDamage();
                 });
                 collectibles.forEach(g => {
                     g.update(); g.draw();
@@ -628,17 +795,23 @@
                         score += 10; scoreEl.innerText = score; g.reset();
                     }
                 });
+                shards.forEach(s => {
+                    s.update(); s.draw();
+                    if (gameActive && Math.hypot(player.x - s.x, player.y - s.y) < 20) {
+                        score += 25; scoreEl.innerText = score; s.reset();
+                    }
+                });
             }
 
             requestAnimationFrame(animate);
         }
 
-        // --- 4. Inputs ---
         const moveHandler = (e) => {
             if (!gameActive) return;
             const x = e.touches ? e.touches[0].clientX : e.clientX;
             const y = e.touches ? e.touches[0].clientY : e.clientY;
             player.targetX = x; player.targetY = y;
+            constrainPlayer();
         };
 
         window.addEventListener('mousemove', moveHandler);
@@ -660,32 +833,83 @@
         window.addEventListener('keydown', (e) => { 
             keys[e.key] = true; 
             if (waitingForReboot && (e.key === 'Enter' || e.key === ' ')) runIntro("NEON DASH", "menu");
+            if (gameActive && (e.key === 'p' || e.key === 'P')) quitToMenu();
         });
         window.addEventListener('keyup', (e) => { keys[e.key] = false; });
         window.addEventListener('resize', resize);
 
-        // --- 5. UI Event Listeners ---
-        startBtn.onclick = () => startGame(false);
-        document.getElementById('sandbox-btn').onclick = () => startGame(true);
+        startBtn.onclick = () => {
+            permanentInvincibility = false;
+            initialShardCount = 2; 
+            startGame(false);
+        };
+        document.getElementById('sandbox-btn').onclick = () => {
+            permanentInvincibility = false;
+            startGame(true);
+        };
         document.getElementById('to-settings-btn').onclick = () => showMenu(settingsMenu);
         document.getElementById('to-custom-btn').onclick = () => showMenu(customMenu);
+        exitBtnUi.onclick = () => quitToMenu();
         
         document.querySelectorAll('.back-to-main').forEach(btn => {
             btn.onclick = () => showMenu(mainMenu);
         });
 
+        const tabGameplayBtn = document.getElementById('tab-gameplay-btn');
+        const tabPlayerBtn = document.getElementById('tab-player-btn');
+        const tabGameplay = document.getElementById('tab-gameplay');
+        const tabPlayer = document.getElementById('tab-player');
+
+        tabGameplayBtn.onclick = () => {
+            tabGameplayBtn.classList.add('active');
+            tabPlayerBtn.classList.remove('active');
+            tabGameplay.classList.add('active');
+            tabPlayer.classList.remove('active');
+        };
+
+        tabPlayerBtn.onclick = () => {
+            tabPlayerBtn.classList.add('active');
+            tabGameplayBtn.classList.remove('active');
+            tabPlayer.classList.add('active');
+            tabGameplay.classList.remove('active');
+        };
+
         document.getElementById('toggle-anim-btn').onclick = function() {
             animEnabled = !animEnabled;
-            this.innerText = `Animations: ${animEnabled ? 'ON' : 'OFF'}`;
+            this.innerText = `Bloom: ${animEnabled ? 'ON' : 'OFF'}`;
+            this.classList.toggle('active');
+        };
+
+        document.getElementById('toggle-grid-btn').onclick = function() {
+            gridEnabled = !gridEnabled;
+            this.innerText = `Grid: ${gridEnabled ? 'ON' : 'OFF'}`;
+            this.classList.toggle('active');
+        };
+
+        document.getElementById('toggle-box-btn').onclick = function() {
+            boxEnabled = !boxEnabled;
+            this.innerText = `Containment Box: ${boxEnabled ? 'ON' : 'OFF'}`;
+            this.classList.toggle('active');
+        };
+
+        document.getElementById('toggle-blink-btn').onclick = function() {
+            blinkEnabled = !blinkEnabled;
+            this.innerText = `Invincible Blink: ${blinkEnabled ? 'ON' : 'OFF'}`;
+            this.classList.toggle('active');
+        };
+
+        document.getElementById('toggle-invincible-btn').onclick = function() {
+            permanentInvincibility = !permanentInvincibility;
+            this.innerText = `God Mode: ${permanentInvincibility ? 'ON' : 'OFF'}`;
             this.classList.toggle('active');
         };
 
         document.querySelectorAll('.heart-setting-btn').forEach(btn => {
             btn.onclick = function() {
                 document.querySelectorAll('.heart-setting-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                hearts = parseInt(this.dataset.hearts);
-                document.getElementById('custom-hearts').value = hearts;
+                const heartVal = this.dataset.hearts;
+                document.querySelectorAll(`.heart-setting-btn[data-hearts="${heartVal}"]`).forEach(b => b.classList.add('active'));
+                hearts = parseInt(heartVal);
             };
         });
 
@@ -698,6 +922,7 @@
                 isHardcore = this.dataset.hardcore === "true";
                 hazardSpeedMult = 1.0;
                 initialEnemyCount = Math.floor(5 * diffBase);
+                initialShardCount = 2;
             };
         });
 
@@ -705,12 +930,11 @@
             playerLerp = parseFloat(document.getElementById('custom-player-speed').value);
             hazardSpeedMult = parseFloat(document.getElementById('custom-hazard-speed').value);
             initialEnemyCount = parseInt(document.getElementById('custom-density').value);
-            hearts = parseInt(document.getElementById('custom-hearts').value);
-            isHardcore = false; // Custom overrides hardcore presets
+            initialShardCount = parseInt(document.getElementById('custom-shards').value);
+            isHardcore = false; 
             startGame(false);
         };
 
-        // --- 6. Init ---
         resize();
         overlay.classList.add('visible');
         runIntro("NEON DASH", "menu");
