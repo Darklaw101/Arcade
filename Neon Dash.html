@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Dash</title>
+    <style>
+        :root {
+            --neon-blue: #00f2ff;
+            --neon-pink: #ff007f;
+            --neon-gold: #ffcf00;
+            --bg-dark: #0a0a0c;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: white;
+            user-select: none;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .stat {
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        #score-val { color: var(--neon-gold); }
+
+        #health-display {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .heart-icon {
+            width: 20px;
+            height: 20px;
+            fill: var(--neon-pink);
+            filter: drop-shadow(0 0 5px var(--neon-pink));
+        }
+
+        #countdown {
+            position: absolute;
+            font-size: 120px;
+            font-weight: 900;
+            color: var(--neon-blue);
+            text-shadow: 0 0 30px var(--neon-blue);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 5;
+            transition: transform 0.2s ease-out;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            text-align: center;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 1s ease;
+            pointer-events: none;
+        }
+
+        #overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .glitch-wrapper {
+            position: relative;
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease;
+        }
+
+        .glitch-wrapper.centered { transform: translateY(0); }
+        .glitch-wrapper.ready { transform: translateY(-15vh); }
+
+        h1 {
+            font-size: clamp(30px, 10vw, 80px);
+            margin: 0;
+            color: white;
+            position: relative;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            min-height: 1.2em;
+        }
+
+        h1::before, h1::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.8;
+        }
+
+        .ready h1::before {
+            color: var(--neon-blue);
+            animation: glitch-anim 0.3s infinite linear alternate-reverse;
+            left: -2px;
+        }
+
+        .ready h1::after {
+            color: var(--neon-pink);
+            animation: glitch-anim 0.3s infinite linear alternate;
+            left: 2px;
+        }
+
+        @keyframes glitch-anim {
+            0% { clip-path: inset(10% 0 30% 0); transform: translate(-2px, 2px); }
+            100% { clip-path: inset(5% 0 85% 0); transform: translate(2px, -2px); }
+        }
+
+        .menu-pane {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .active-menu {
+            display: flex !important;
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .primary-btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: transparent;
+            color: var(--neon-blue);
+            border: 2px solid var(--neon-blue);
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 1px;
+            min-width: 180px;
+        }
+
+        .primary-btn:hover {
+            background: rgba(0, 242, 255, 0.1);
+            box-shadow: 0 0 20px var(--neon-blue);
+        }
+
+        .secondary-btn {
+            padding: 8px 18px;
+            font-size: 12px;
+            border: 1px solid #444;
+            background: rgba(255,255,255,0.05);
+            color: #ccc;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .secondary-btn.active {
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+            background: rgba(0, 242, 255, 0.1);
+        }
+
+        .slider-group {
+            width: 250px;
+            margin: 10px 0;
+            text-align: left;
+        }
+
+        .slider-group label {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--neon-blue);
+        }
+
+        #reboot-hint {
+            position: absolute;
+            bottom: 40px;
+            color: var(--neon-blue);
+            font-size: 12px;
+            letter-spacing: 2px;
+            opacity: 0;
+            transition: opacity 1s ease;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 12px;
+            height: 1em;
+            background: var(--neon-blue);
+            margin-left: 5px;
+            vertical-align: middle;
+            animation: blink 0.8s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .setting-label {
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="ui-layer">
+            <div class="stat">SCORE: <span id="score-val">0</span></div>
+            <div id="health-display"></div>
+            <div class="stat" style="font-size: 14px; opacity: 0.7; margin-top: 10px;">HIGH: <span id="high-val">0</span></div>
+        </div>
+
+        <div id="countdown"></div>
+
+        <div id="overlay">
+            <div class="glitch-wrapper centered" id="title-wrapper">
+                <h1 id="title" data-text=""></h1><span id="title-cursor" class="cursor"></span>
+            </div>
+            
+            <!-- Main Menu -->
+            <div id="menu-content" class="menu-pane">
+                <div class="btn-row">
+                    <button class="secondary-btn diff-btn" data-level="0.6" data-speed="0.05" data-hardcore="false">CASUAL</button>
+                    <button class="secondary-btn diff-btn active" data-level="1.0" data-speed="0.08" data-hardcore="false">ARCADE</button>
+                    <button class="secondary-btn diff-btn" data-level="1.6" data-speed="0.15" data-hardcore="true">HARDCORE</button>
+                </div>
+                <div class="btn-row">
+                    <button id="start-btn" class="primary-btn">Initialize</button>
+                </div>
+                <div class="btn-row">
+                    <button id="to-custom-btn" class="secondary-btn">Custom</button>
+                    <button id="sandbox-btn" class="secondary-btn">Sandbox</button>
+                    <button id="to-settings-btn" class="secondary-btn">Settings</button>
+                </div>
+            </div>
+
+            <!-- Settings Menu -->
+            <div id="settings-menu" class="menu-pane">
+                <p class="setting-label">Configurations</p>
+                <div class="btn-row">
+                    <button id="toggle-anim-btn" class="secondary-btn active">Animations: ON</button>
+                </div>
+                <p class="setting-label">Core Integrity (Hearts)</p>
+                <div class="btn-row">
+                    <button class="secondary-btn heart-setting-btn" data-hearts="1">1</button>
+                    <button class="secondary-btn heart-setting-btn active" data-hearts="2">2</button>
+                    <button class="secondary-btn heart-setting-btn" data-hearts="3">3</button>
+                </div>
+                <button class="primary-btn back-to-main">Back</button>
+            </div>
+
+            <!-- Custom Menu -->
+            <div id="custom-menu" class="menu-pane">
+                <p class="setting-label">Manual Overrides</p>
+                <div class="slider-group">
+                    <label>Player Response (Speed)</label>
+                    <input type="range" id="custom-player-speed" min="0.02" max="0.3" step="0.01" value="0.1">
+                </div>
+                <div class="slider-group">
+                    <label>Hazard Velocity</label>
+                    <input type="range" id="custom-hazard-speed" min="0.5" max="3.0" step="0.1" value="1.0">
+                </div>
+                <div class="slider-group">
+                    <label>Spawn Density</label>
+                    <input type="range" id="custom-density" min="1" max="15" step="1" value="5">
+                </div>
+                <div class="slider-group">
+                    <label>Core Stability (Hearts)</label>
+                    <input type="range" id="custom-hearts" min="1" max="3" step="1" value="2">
+                </div>
+                <button id="custom-start-btn" class="primary-btn">Deploy</button>
+                <br>
+                <button class="secondary-btn back-to-main">Cancel</button>
+            </div>
+
+            <div id="reboot-hint">REBOOT UNIT DETECTED</div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        // --- 1. Declarations ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score-val');
+        const highEl = document.getElementById('high-val');
+        const healthEl = document.getElementById('health-display');
+        const overlay = document.getElementById('overlay');
+        const uiLayer = document.getElementById('ui-layer');
+        const countdownEl = document.getElementById('countdown');
+        const titleEl = document.getElementById('title');
+        const titleWrapper = document.getElementById('title-wrapper');
+        const titleCursor = document.getElementById('title-cursor');
+        const rebootHint = document.getElementById('reboot-hint');
+        const startBtn = document.getElementById('start-btn');
+
+        // Menus
+        const mainMenu = document.getElementById('menu-content');
+        const settingsMenu = document.getElementById('settings-menu');
+        const customMenu = document.getElementById('custom-menu');
+
+        // State
+        let gameActive = false;
+        let isWarmUp = false;
+        let isTransitioning = false;
+        let isFadingOut = false;
+        let waitingForReboot = false;
+        let sandboxMode = false;
+        let animEnabled = true;
+        let hasFailedOnce = false;
+
+        let score = 0;
+        let highScore = 0;
+        let hearts = 2;
+        let currentHearts = 2;
+        let invulnerable = false;
+        let enemies = [];
+        let collectibles = [];
+        
+        let diffBase = 1.0;
+        let isHardcore = false;
+        let hazardSpeedMult = 1.0;
+        let playerLerp = 0.08;
+        let initialEnemyCount = 5;
+
+        const random = (min, max) => Math.random() * (max - min) + min;
+
+        const heartSvg = `<svg class="heart-icon" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+
+        // --- 2. Logic Classes ---
+        class GameObject {
+            constructor(type) {
+                this.type = type;
+                this.opacity = 1.0;
+                this.reset();
+            }
+            reset() {
+                const side = Math.floor(Math.random() * 4);
+                const buffer = 100;
+                if (side === 0) { this.x = random(0, canvas.width); this.y = -buffer; }
+                else if (side === 1) { this.x = canvas.width + buffer; this.y = random(0, canvas.height); }
+                else if (side === 2) { this.x = random(0, canvas.width); this.y = canvas.height + buffer; }
+                else { this.x = -buffer; this.y = random(0, canvas.height); }
+
+                const tx = random(canvas.width * 0.1, canvas.width * 0.9);
+                const ty = random(canvas.height * 0.1, canvas.height * 0.9);
+                const angle = Math.atan2(ty - this.y, tx - this.x);
+                const speed = (this.type === 'enemy' ? random(2, 4) * diffBase * hazardSpeedMult : random(1, 3));
+                
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.size = this.type === 'enemy' ? random(15, 30) : 12;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotSpeed = random(-0.05, 0.05);
+            }
+            update() {
+                if (!isFadingOut) {
+                    this.x += this.vx; this.y += this.vy; 
+                    this.rotation += this.rotSpeed;
+                    if (this.x < -200 || this.x > canvas.width + 200 || this.y < -200 || this.y > canvas.height + 200) this.reset();
+                } else { this.opacity -= 0.02; }
+            }
+            draw() {
+                if (this.opacity <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                if (this.type === 'enemy') {
+                    if (animEnabled) { ctx.shadowBlur = 15; ctx.shadowColor = '#ff007f'; }
+                    ctx.strokeStyle = '#ff007f'; ctx.lineWidth = 3;
+                    ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
+                } else {
+                    if (animEnabled) { ctx.shadowBlur = 10; ctx.shadowColor = '#ffcf00'; }
+                    ctx.fillStyle = '#ffcf00';
+                    ctx.beginPath(); ctx.moveTo(0, -this.size); ctx.lineTo(this.size, 0); 
+                    ctx.lineTo(0, this.size); ctx.lineTo(-this.size, 0); ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        // --- 3. Core Functions ---
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if (!gameActive && !isFadingOut) {
+                player.x = canvas.width / 2; player.y = canvas.height / 2;
+                player.targetX = player.x; player.targetY = player.y;
+            }
+        }
+
+        function updateHealthUI() {
+            healthEl.innerHTML = heartSvg.repeat(currentHearts);
+        }
+
+        async function showMenu(menuElement) {
+            document.querySelectorAll('.menu-pane').forEach(m => m.classList.remove('active-menu'));
+            menuElement.classList.add('active-menu');
+            if (menuElement === mainMenu) {
+                startBtn.innerText = hasFailedOnce ? "Reboot" : "Initialize";
+            }
+        }
+
+        async function runIntro(text, nextAction) {
+            waitingForReboot = false;
+            rebootHint.style.opacity = "0";
+            titleWrapper.classList.remove('ready');
+            titleWrapper.classList.add('centered');
+            titleEl.innerText = "";
+            titleCursor.style.display = "inline-block";
+
+            for (let i = 0; i <= text.length; i++) {
+                titleEl.innerText = text.slice(0, i);
+                titleEl.setAttribute('data-text', text.slice(0, i));
+                await new Promise(r => setTimeout(r, 70));
+            }
+            
+            titleCursor.style.display = "none";
+            await new Promise(r => setTimeout(r, 500));
+            
+            if (nextAction === 'menu') {
+                titleWrapper.classList.remove('centered');
+                titleWrapper.classList.add('ready');
+                showMenu(mainMenu);
+            } else if (nextAction === 'hint') {
+                waitingForReboot = true;
+                rebootHint.style.opacity = "0.8";
+                player.targetX = canvas.width / 2;
+                player.targetY = canvas.height - 100;
+            }
+        }
+
+        async function startGame(isSandbox = false) {
+            if (isTransitioning) return;
+            isTransitioning = true;
+            overlay.classList.remove('visible');
+            uiLayer.style.opacity = isSandbox ? "0" : "1";
+            
+            score = 0; scoreEl.innerText = score;
+            currentHearts = isHardcore ? 1 : hearts;
+            updateHealthUI();
+
+            enemies = []; collectibles = []; player.trail = [];
+            isFadingOut = false; sandboxMode = isSandbox;
+            invulnerable = false;
+            
+            if (!waitingForReboot) {
+                player.x = canvas.width / 2; player.y = canvas.height / 2;
+                player.targetX = player.x; player.targetY = player.y;
+            }
+
+            await new Promise(r => setTimeout(r, 500));
+            isTransitioning = false;
+            gameActive = true;
+            animate();
+
+            if (!isSandbox) {
+                await runCountdown();
+                for (let i = 0; i < initialEnemyCount; i++) enemies.push(new GameObject('enemy'));
+                for (let i = 0; i < 3; i++) collectibles.push(new GameObject('gold'));
+            }
+        }
+
+        async function runCountdown() {
+            isWarmUp = true;
+            for (let i = 3; i > 0; i--) {
+                countdownEl.innerText = i;
+                countdownEl.style.opacity = "1";
+                await new Promise(r => setTimeout(r, 1000));
+                countdownEl.style.opacity = "0";
+            }
+            isWarmUp = false;
+        }
+
+        function takeDamage() {
+            if (invulnerable || !gameActive) return;
+            currentHearts--;
+            updateHealthUI();
+            
+            if (currentHearts <= 0) {
+                gameOver();
+            } else {
+                invulnerable = true;
+                setTimeout(() => invulnerable = false, 1500);
+            }
+        }
+
+        async function gameOver() {
+            gameActive = false;
+            isWarmUp = false;
+            isFadingOut = true;
+            hasFailedOnce = true; 
+            uiLayer.style.opacity = "0";
+            
+            await new Promise(r => setTimeout(r, 800));
+            overlay.classList.add('visible');
+            if (score > highScore) { highScore = score; highEl.innerText = highScore; }
+            await runIntro("SYSTEM FAILURE", "hint");
+        }
+
+        const keys = {};
+        const player = {
+            x: 0, y: 0, targetX: 0, targetY: 0,
+            size: 20, color: '#00f2ff', trail: []
+        };
+
+        function handleKeyboard() {
+            const speed = 8;
+            if (keys['ArrowUp'] || keys['w']) player.targetY -= speed;
+            if (keys['ArrowDown'] || keys['s']) player.targetY += speed;
+            if (keys['ArrowLeft'] || keys['a']) player.targetX -= speed;
+            if (keys['ArrowRight'] || keys['d']) player.targetX += speed;
+
+            player.targetX = Math.max(0, Math.min(canvas.width, player.targetX));
+            player.targetY = Math.max(0, Math.min(canvas.height, player.targetY));
+        }
+
+        function animate() {
+            if (!gameActive && !isFadingOut) return;
+
+            ctx.fillStyle = 'rgba(10, 10, 12, 0.4)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Grid
+            ctx.strokeStyle = `rgba(0, 242, 255, 0.05)`;
+            for(let i=0; i<canvas.width; i+=60) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
+            for(let i=0; i<canvas.height; i+=60) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+
+            if (gameActive) handleKeyboard();
+
+            player.x += (player.targetX - player.x) * playerLerp;
+            player.y += (player.targetY - player.y) * playerLerp;
+
+            player.trail.push({x: player.x, y: player.y});
+            if (player.trail.length > 10) player.trail.shift();
+            
+            ctx.beginPath(); 
+            ctx.strokeStyle = invulnerable && Math.floor(Date.now()/100)%2 ? 'transparent' : player.color; 
+            ctx.lineWidth = 3;
+            player.trail.forEach((p, i) => {
+                ctx.globalAlpha = i / player.trail.length;
+                if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+            });
+            ctx.stroke(); ctx.globalAlpha = 1;
+
+            if (animEnabled && (!invulnerable || Math.floor(Date.now()/100)%2)) { 
+                ctx.shadowBlur = 15; ctx.shadowColor = player.color; 
+            }
+            
+            if (!invulnerable || Math.floor(Date.now()/100)%2) {
+                ctx.fillStyle = player.color;
+                ctx.fillRect(player.x - 10, player.y - 10, 20, 20);
+            }
+            ctx.shadowBlur = 0;
+
+            if (!isWarmUp && !sandboxMode) {
+                enemies.forEach(e => {
+                    e.update(); e.draw();
+                    if (gameActive && Math.hypot(player.x - e.x, player.y - e.y) < 20) takeDamage();
+                });
+                collectibles.forEach(g => {
+                    g.update(); g.draw();
+                    if (gameActive && Math.hypot(player.x - g.x, player.y - g.y) < 20) {
+                        score += 10; scoreEl.innerText = score; g.reset();
+                    }
+                });
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // --- 4. Inputs ---
+        const moveHandler = (e) => {
+            if (!gameActive) return;
+            const x = e.touches ? e.touches[0].clientX : e.clientX;
+            const y = e.touches ? e.touches[0].clientY : e.clientY;
+            player.targetX = x; player.targetY = y;
+        };
+
+        window.addEventListener('mousemove', moveHandler);
+        window.addEventListener('touchmove', (e) => { e.preventDefault(); moveHandler(e); }, {passive:false});
+        
+        const handleRebootAction = (e) => {
+            if (waitingForReboot) {
+                const x = e.touches ? e.touches[0].clientX : e.clientX;
+                const y = e.touches ? e.touches[0].clientY : e.clientY;
+                if (Math.hypot(x - player.x, y - player.y) < 60) {
+                    runIntro("NEON DASH", "menu");
+                }
+            }
+        };
+
+        window.addEventListener('mousedown', handleRebootAction);
+        window.addEventListener('touchstart', handleRebootAction);
+        
+        window.addEventListener('keydown', (e) => { 
+            keys[e.key] = true; 
+            if (waitingForReboot && (e.key === 'Enter' || e.key === ' ')) runIntro("NEON DASH", "menu");
+        });
+        window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+        window.addEventListener('resize', resize);
+
+        // --- 5. UI Event Listeners ---
+        startBtn.onclick = () => startGame(false);
+        document.getElementById('sandbox-btn').onclick = () => startGame(true);
+        document.getElementById('to-settings-btn').onclick = () => showMenu(settingsMenu);
+        document.getElementById('to-custom-btn').onclick = () => showMenu(customMenu);
+        
+        document.querySelectorAll('.back-to-main').forEach(btn => {
+            btn.onclick = () => showMenu(mainMenu);
+        });
+
+        document.getElementById('toggle-anim-btn').onclick = function() {
+            animEnabled = !animEnabled;
+            this.innerText = `Animations: ${animEnabled ? 'ON' : 'OFF'}`;
+            this.classList.toggle('active');
+        };
+
+        document.querySelectorAll('.heart-setting-btn').forEach(btn => {
+            btn.onclick = function() {
+                document.querySelectorAll('.heart-setting-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                hearts = parseInt(this.dataset.hearts);
+                document.getElementById('custom-hearts').value = hearts;
+            };
+        });
+
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.onclick = function() {
+                document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                diffBase = parseFloat(this.dataset.level);
+                playerLerp = parseFloat(this.dataset.speed);
+                isHardcore = this.dataset.hardcore === "true";
+                hazardSpeedMult = 1.0;
+                initialEnemyCount = Math.floor(5 * diffBase);
+            };
+        });
+
+        document.getElementById('custom-start-btn').onclick = () => {
+            playerLerp = parseFloat(document.getElementById('custom-player-speed').value);
+            hazardSpeedMult = parseFloat(document.getElementById('custom-hazard-speed').value);
+            initialEnemyCount = parseInt(document.getElementById('custom-density').value);
+            hearts = parseInt(document.getElementById('custom-hearts').value);
+            isHardcore = false; // Custom overrides hardcore presets
+            startGame(false);
+        };
+
+        // --- 6. Init ---
+        resize();
+        overlay.classList.add('visible');
+        runIntro("NEON DASH", "menu");
+
+    </script>
+</body>
+</html>
